@@ -19,8 +19,11 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 	// list to store all users together with their connected rooms
 	static List<String> roomUsers = new ArrayList<>();
 
-	// list to store all users name
-	private static List<String> names = new ArrayList<>();
+	// list to store all active users name
+	private static List<String> activeUsers = new ArrayList<>();
+
+	private static List<String> registeredUsers = new ArrayList<>();
+
 	// list to store all available rooms, the default room is 'general'
 	private static List<String> rooms = new ArrayList<String>() {
 		{
@@ -36,24 +39,29 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 		orb = orb_val;
 	}
 
-	public String connection(String userName) {
+	public String connection(String userName, String password) {
 
 		// create a 'StringBuilder sb' to store messages
 		StringBuilder sb = new StringBuilder();
 
-        // if names list already contains 'userName', return 'failure' message
-        // else 
-        //     add 'userName' to 'names' list
-        //     append default room name to 'userName' and add it to 'roomUsers' list
-        //     create a new message indicating a new user is connected and add it to 'messageLogs' list 
-        //     get all the previously sent messages to this group and append it to a string builder (sb) object
-        //     return a string builder (sb) object containing all previous messages in this group separated by | symbol
-		if (names.contains(userName.toLowerCase())) {
-			sb.append("failure");
+		// if names list already contains 'userName', return 'failure' message
+		// else
+		// add 'userName' to 'names' list
+		// append default room name to 'userName' and add it to 'roomUsers' list
+		// create a new message indicating a new user is connected and add it to
+		// 'messageLogs' list
+		// get all the previously sent messages to this group and append it to a string
+		// builder (sb) object
+		// return a string builder (sb) object containing all previous messages in this
+		// group separated by | symbol
+		if (activeUsers.contains(userName.toLowerCase())) {
+			sb.append("failureActive");
+		} else if (!registeredUsers.contains(userName + " " + password)) {
+			sb.append("failureReg");
 		} else {
 			String TimeStamp = new java.util.Date().toString();
 			String connectedTime = "Connected on " + TimeStamp;
-			names.add(userName);
+			activeUsers.add(userName.toLowerCase());
 			roomUsers.add("general " + userName);
 			messageLogs.add("general @" + userName + " " + connectedTime);
 
@@ -69,7 +77,28 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 		return sb.toString();
 	}
 
-	// add a new message to the 'messageLogs' list, the new message contains 'roomName' followed by the 'message'
+	//
+	public String signUp(String userName, String password) {
+
+		StringBuilder sb = new StringBuilder();
+
+		for (int i = 0; i < registeredUsers.size(); i++) {
+			String[] splitReg = registeredUsers.get(i).split(" ");
+			if (splitReg[0].equals(userName.toLowerCase())) {
+				sb.append("failure");
+			}
+		}
+
+		if (sb.length() == 0) {
+			registeredUsers.add(userName.toLowerCase() + " " + password);
+			sb.append("success");
+		}
+
+		return sb.toString();
+	}
+
+	// add a new message to the 'messageLogs' list, the new message contains
+	// 'roomName' followed by the 'message'
 	public void newMessages(String roomName, String message) {
 		messageLogs.add(roomName + " " + message);
 	}
@@ -86,7 +115,8 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 			valueToReturn = message.substring(message.indexOf(" ") + 1);
 		}
 
-		// return last message in 'roomName', or null if there is no new message for 'roomName'
+		// return last message in 'roomName', or null if there is no new message for
+		// 'roomName'
 		return valueToReturn;
 	}
 
@@ -95,8 +125,9 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 
 		StringBuilder sb = new StringBuilder();
 
-		// loop through the names list and append all user names to a 'StringBuilder (sb)' object
-		for (String s : names) {
+		// loop through the names list and append all user names to a 'StringBuilder
+		// (sb)' object
+		for (String s : activeUsers) {
 			sb.append(s);
 			sb.append(" ");
 		}
@@ -109,7 +140,8 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 	public String listRooms() {
 		StringBuilder sb = new StringBuilder();
 
-		// loop through the rooms list and append all available rooms to a 'StringBuilder (sb)' object
+		// loop through the rooms list and append all available rooms to a
+		// 'StringBuilder (sb)' object
 		for (String s : rooms) {
 			sb.append(s);
 			sb.append(" ");
@@ -142,7 +174,7 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 
 		// if 'roomToJoin' does not exist, return 'no-room' failure message
 		// else, append 'roomToJoin' to 'name' and add it to the 'roomUsers' list,
-		// 		return success message 'joined'
+		// return success message 'joined'
 		if (!rooms.contains(roomToJoin)) {
 			response.append("no-room");
 		} else {
@@ -168,8 +200,8 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 		// if 'rooms' does not contain 'roomToLeave' return 'no-room' failure
 		// else if 'roomUsers' does not contain 'name' return 'no-user' failure
 		// else remove 'name' from 'roomToLeave'
-		// 		send message to 'roomToLeave' users indicating the user has left
-		// 		return 'leave-success' success
+		// send message to 'roomToLeave' users indicating the user has left
+		// return 'leave-success' success
 		if (!rooms.contains(roomToLeave)) {
 			response = "no-room";
 		} else if (!roomUsers.contains(roomToLeave + " " + name)) {
@@ -187,9 +219,9 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 	// disconnect from the chat application
 	public void disconnect(String userName, String roomName) {
 		// remove 'userName' from 'names' list
-		names.remove(userName);
+		activeUsers.remove(userName);
 		// send message to 'roomName' users indicating the user has left
-		messageLogs.add(roomName + " " + userName + " has left");
+		messageLogs.add(roomName + " " + userName + " has disconnected");
 	}
 
 }
@@ -216,7 +248,8 @@ public class CORBAServer {
 
 			// get the root naming context
 			org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
-			// Use NamingContextExt which is part of the Interoperable Naming Service (INS) specification.
+			// Use NamingContextExt which is part of the Interoperable Naming Service (INS)
+			// specification.
 			NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
 
 			// bind the Object Reference in Naming
