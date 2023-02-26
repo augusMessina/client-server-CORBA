@@ -10,6 +10,7 @@ module ChatApp
     string listUsers(in string roomName);
     string listRooms();
     string createNewRooms(in string roomName);
+    string createNewPrivateRooms(in string roomName, in string password);
     string joinRoom(in string roomToJoin, in string name);
     string leaveRoom(in string roomToLeave, in string name);
     void disconnect(in string userName, in string roomName);

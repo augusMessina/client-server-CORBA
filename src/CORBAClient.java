@@ -64,7 +64,10 @@ public class CORBAClient {
 
                 String signupResponse = serverInterfaceImpl.signUp(nameInput, passwordInput);
                 if (signupResponse.equals("failure")) {
-                    System.out.println("Please choose a different name");
+                    System.out.println("Please choose a different name\n");
+                    System.exit(0);
+                } else if (signupResponse.equals("invalid")) {
+                    System.out.println("Error: names and passwords cant contain '|'\n");
                     System.exit(0);
                 }
 
@@ -80,10 +83,8 @@ public class CORBAClient {
             // set the 'userName' to 'nameInput'
             // print the 'connectedTime' to the terminal
             String connectionResponse = serverInterfaceImpl.connection(nameInput, passwordInput);
-            if (connectionResponse.equals("failureActive")) {
-                System.out.println("User is already logged in");
-            } else if (connectionResponse.equals("failureReg")) {
-                System.out.println("Incorrect user name or password");
+            if (connectionResponse.equals("failure")) {
+                System.out.println("Incorrect user name or password\n");
             } else {
                 connectedRoom = "general";
                 strResponse = connectionResponse;
@@ -245,17 +246,43 @@ public class CORBAClient {
                     } else if (input.equals("/currentRoom")) {
                         System.out.println("You are currently in " + connectedRoom + "\n");
 
+                        // else if the 'input' starts with the keyword '/createPrivate'
+                        // create a new private room by calling
+                        // the remote method 'createNewPrivateRooms' if it does not already exist
+
+                    } else if (input.startsWith("/createPrivate")) {
+                        String[] inputParts = input.split(Pattern.quote(" "));
+                        if (inputParts.length < 3) {
+                            System.out.println("Invalid command. You must include a room name and a password\n");
+                        } else {
+                            String response = serverInterfaceImpl.createNewPrivateRooms(inputParts[1], inputParts[2]);
+                            if (response.equals("invalid")) {
+                                System.out.println("Error: rooms name cant contain '|'\n");
+                            } else if (response.equals("exist")) {
+                                System.out.println(inputParts[1] + " room already exists\n");
+                            } else if (response.equals("created")) {
+                                System.out.println(inputParts[1] + " private room was created\n");
+                                System.out.println("Room password: " + inputParts[2] + "\n");
+                            }
+                        }
+
                         // else if the 'input' starts with the keyword '/create' create a new room by
                         // calling
                         // the remote method 'createNewRooms' if it does not already exist
 
                     } else if (input.startsWith("/create")) {
                         String[] inputParts = input.split(Pattern.quote(" "));
-                        String response = serverInterfaceImpl.createNewRooms(inputParts[1]);
-                        if (response.equals("exist")) {
-                            System.out.println(inputParts[1] + " room already exists\n");
-                        } else if (response.equals("created")) {
-                            System.out.println(inputParts[1] + " room was created\n");
+                        if (inputParts.length == 1) {
+                            System.out.println("Invalid command. You must include a room name\n");
+                        } else {
+                            String response = serverInterfaceImpl.createNewRooms(inputParts[1]);
+                            if (response.equals("invalid")) {
+                                System.out.println("Error: rooms name cant contain '|'\n");
+                            } else if (response.equals("exist")) {
+                                System.out.println(inputParts[1] + " room already exists\n");
+                            } else if (response.equals("created")) {
+                                System.out.println(inputParts[1] + " room was created\n");
+                            }
                         }
 
                         // else send the message to all connected users by calling the remote method

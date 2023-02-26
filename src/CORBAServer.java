@@ -22,6 +22,7 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 	// list to store all active users name
 	private static List<String> activeUsers = new ArrayList<>();
 
+	// list to store all registered users and their passwords
 	private static List<String> registeredUsers = new ArrayList<>();
 
 	// list to store all available rooms, the default room is 'general'
@@ -30,6 +31,8 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 			add("general");
 		}
 	};
+
+	private static List<String> privateRooms = new ArrayList<String>();
 
 	// create an ORB object
 	private ORB orb;
@@ -54,10 +57,8 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 		// builder (sb) object
 		// return a string builder (sb) object containing all previous messages in this
 		// group separated by | symbol
-		if (activeUsers.contains(userName.toLowerCase())) {
-			sb.append("failureActive");
-		} else if (!registeredUsers.contains(userName + " " + password)) {
-			sb.append("failureReg");
+		if (!registeredUsers.contains(userName.toLowerCase() + "|" + password)) {
+			sb.append("failure");
 		} else {
 			String TimeStamp = new java.util.Date().toString();
 			String connectedTime = "Connected on " + TimeStamp;
@@ -82,16 +83,20 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 
 		StringBuilder sb = new StringBuilder();
 
-		for (int i = 0; i < registeredUsers.size(); i++) {
-			String[] splitReg = registeredUsers.get(i).split(" ");
-			if (splitReg[0].equals(userName.toLowerCase())) {
-				sb.append("failure");
+		if (userName.contains("|") || password.contains("|")) {
+			sb.append("invalid");
+		} else {
+			for (int i = 0; i < registeredUsers.size(); i++) {
+				String[] splitReg = registeredUsers.get(i).split("|");
+				if (splitReg[0].equals(userName.toLowerCase())) {
+					sb.append("failure");
+				}
 			}
-		}
 
-		if (sb.length() == 0) {
-			registeredUsers.add(userName.toLowerCase() + " " + password);
-			sb.append("success");
+			if (sb.length() == 0) {
+				registeredUsers.add(userName.toLowerCase() + "|" + password);
+				sb.append("success");
+			}
 		}
 
 		return sb.toString();
@@ -157,10 +162,32 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 
 		// if 'roomName' already exist, return a failure message 'exist'
 		// else, add 'roomName' to the rooms list and return a success message 'created'
-		if (rooms.contains(roomName)) {
+		if (roomName.contains("|")) {
+			response = "invalid";
+		} else if (rooms.contains(roomName)) {
 			response = "exist";
 		} else {
 			rooms.add(roomName);
+			response = "created";
+		}
+
+		// return either success or failure
+		return response;
+	}
+
+	// create a new room 'roomName'
+	public String createNewPrivateRooms(String roomName, String password) {
+		String response = "";
+
+		// if 'roomName' already exist, return a failure message 'exist'
+		// else, add 'roomName' to the rooms list and return a success message 'created'
+		if (roomName.contains("|") || password.contains("|")) {
+			response = "invalid";
+		} else if (rooms.contains(roomName)) {
+			response = "exist";
+		} else {
+			rooms.add(roomName);
+			privateRooms.add(roomName + "|" + password);
 			response = "created";
 		}
 
