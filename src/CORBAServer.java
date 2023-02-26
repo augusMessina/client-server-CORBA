@@ -8,6 +8,7 @@ import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POA;
 
+import java.io.Console;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -149,6 +150,11 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 		// 'StringBuilder (sb)' object
 		for (String s : rooms) {
 			sb.append(s);
+			for (int i = 0; i < privateRooms.size(); i++) {
+				if (privateRooms.get(i).startsWith(s)) {
+					sb.append("(private)");
+				}
+			}
 			sb.append(" ");
 		}
 
@@ -202,7 +208,49 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 		// if 'roomToJoin' does not exist, return 'no-room' failure message
 		// else, append 'roomToJoin' to 'name' and add it to the 'roomUsers' list,
 		// return success message 'joined'
+
+		Boolean is_private = false;
+		for (int i = 0; i < privateRooms.size(); i++) {
+			if (privateRooms.get(i).startsWith(roomToJoin)) {
+				is_private = true;
+			}
+		}
+
 		if (!rooms.contains(roomToJoin)) {
+			response.append("no-room");
+		} else if (is_private) {
+			response.append("is-private");
+		} else {
+			roomUsers.add(roomToJoin + " " + name);
+			messageLogs.add(roomToJoin + " " + name + " has joined");
+			response.append("joined");
+
+			for (int i = 0; i < messageLogs.size(); i++) {
+				if (messageLogs.get(i).startsWith(roomToJoin)) {
+					response.append("|" + messageLogs.get(i));
+				}
+			}
+		}
+
+		// return either success or failure message
+		return response.toString();
+	}
+
+	// join an existing private room
+	public String joinPrivateRoom(String roomToJoin, String password, String name) {
+		StringBuilder response = new StringBuilder();
+
+		// if 'roomToJoin' does not exist, return 'no-room' failure message
+		// else, append 'roomToJoin' to 'name' and add it to the 'roomUsers' list,
+		// return success message 'joined'
+		Boolean no_room = true;
+		for (int i = 0; i < privateRooms.size(); i++) {
+			if (privateRooms.get(i).contains(roomToJoin + "|" + password)) {
+				no_room = false;
+			}
+		}
+
+		if (no_room) {
 			response.append("no-room");
 		} else {
 			roomUsers.add(roomToJoin + " " + name);

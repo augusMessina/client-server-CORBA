@@ -177,6 +177,31 @@ public class CORBAClient {
 
                                 } else if (response.equals("no-room")) {
                                     System.out.println(inputParts[1] + " room not found\n");
+
+                                } else if (response.equals("is-private")) {
+                                    System.out.println("This room is private, enter the password to join : ");
+                                    String roomPasswordInput = br.readLine();
+                                    String privateResponse = serverInterfaceImpl.joinPrivateRoom(inputParts[1],
+                                            roomPasswordInput, userName);
+                                    String[] privateResponseParts = response.split(Pattern.quote("|"));
+
+                                    if (privateResponse.startsWith("joined")) {
+
+                                        String leave = serverInterfaceImpl.leaveRoom(connectedRoom, userName);
+
+                                        connectedRoom = inputParts[1];
+                                        System.out.println("You have joined " + connectedRoom + " room\n");
+
+                                        for (int i = 1; i < privateResponseParts.length - 1; i++) {
+                                            String[] arr = privateResponseParts[i].split(" ", 2);
+                                            System.out.println(arr[1] + "\n");
+                                        }
+
+                                    } else if (privateResponse.equals("no-room")) {
+                                        System.out.println(inputParts[1] + " room not found or incorrect password\n");
+
+                                    }
+
                                 } else {
                                     System.out.println("Invalid command room\n");
                                 }
@@ -222,7 +247,7 @@ public class CORBAClient {
                         String returnValue = serverInterfaceImpl.listUsers(connectedRoom);
                         String[] returnValueParts = returnValue.split(Pattern.quote(" "));
 
-                        System.out.println("*** All Users ***\n");
+                        System.out.println("*** All Active Users ***\n");
                         for (int i = 0; i < returnValueParts.length; i++) {
                             System.out.println((i + 1) + ". " + returnValueParts[i] + "\n");
                         }
@@ -245,6 +270,23 @@ public class CORBAClient {
 
                     } else if (input.equals("/currentRoom")) {
                         System.out.println("You are currently in " + connectedRoom + "\n");
+
+                    } else if (input.startsWith("/help")) {
+                        System.out.println("* This is a list of the commands you can use:");
+                        System.out.println(
+                                "*    /users -------------------------------------- get a list of the current logged in users       *");
+                        System.out.println(
+                                "*    /rooms -------------------------------------- get a list of the existing rooms                *");
+                        System.out.println(
+                                "*    /create {room-name} ------------------------- create a public chatroom                        *");
+                        System.out.println(
+                                "*    /createPrivate {room-name} {room-password} -- create a private chatroom                       *");
+                        System.out.println(
+                                "*    /join {room-name} --------------------------- join a chatroom                                 *");
+                        System.out.println(
+                                "*    /leave {room-name} -------------------------- leave a chatroom and join the general chatroom  *");
+                        System.out.println(
+                                "*    /exit --------------------------------------- disconnect from the chat (log out)              *\n");
 
                         // else if the 'input' starts with the keyword '/createPrivate'
                         // create a new private room by calling
@@ -285,6 +327,9 @@ public class CORBAClient {
                             }
                         }
 
+                    } else if (input.startsWith("/")) {
+                        System.out.println("Command does not exist. You can see the list of commands with /help\n");
+
                         // else send the message to all connected users by calling the remote method
                         // 'newMessages'
                         // the message contain the room to send 'connectedRoom', the 'userName' and the
@@ -296,7 +341,9 @@ public class CORBAClient {
                     }
                 }
             }
-        } catch (Exception e) {
+        } catch (
+
+        Exception e) {
             System.out.println("ERROR : " + e);
             e.printStackTrace(System.out);
             serverInterfaceImpl.disconnect(userName, connectedRoom);
