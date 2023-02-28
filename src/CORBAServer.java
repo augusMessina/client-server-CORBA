@@ -94,7 +94,7 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 			sb.append("invalid");
 		} else {
 			for (int i = 0; i < registeredUsers.size(); i++) {
-				String[] splitReg = registeredUsers.get(i).split("|");
+				String[] splitReg = registeredUsers.get(i).split(Pattern.quote("|"));
 				if (splitReg[0].equals(userName.toLowerCase())) {
 					sb.append("failure");
 				}
