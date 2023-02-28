@@ -1,5 +1,6 @@
 
 //AUTHOR: HABIB ADO SABIU
+//EDITTED BY: AUGUSTO MESSINA
 
 import ChatApp.*;
 import org.omg.CosNaming.*;
@@ -74,6 +75,10 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 
 		return sb.toString();
 	}
+
+	// *****************************************
+	// Método añadido por el alumno
+	// *****************************************
 
 	// primero comprueba si el nombre de usuario y la contraseña contienen "|". Esta
 	// comprobación se hace porque dicho carácter está reservado para la separación
@@ -172,6 +177,10 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 		return response;
 	}
 
+	// *****************************************
+	// Método añadido por el alumno
+	// *****************************************
+
 	// crea un nuevo chat room privado, comprobando antes si dicho chat room no
 	// existe previamente. Añade el nombre del chat room a rooms, y el nombre junto
 	// con la contrasela a privateRooms
@@ -223,6 +232,10 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 
 		return response.toString();
 	}
+
+	// *****************************************
+	// Método añadido por el alumno
+	// *****************************************
 
 	// permite al usuario unirse a un chat privado. Si la combinación de chat room y
 	// contraseña no existe, devuelve "no-rooms". En caso contrario, añade a
