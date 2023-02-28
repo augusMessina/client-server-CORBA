@@ -14,50 +14,46 @@ import java.util.regex.Pattern;
 
 class ServerInterfaceImpl extends ServerInterfacePOA {
 
-	// list to store all sent messages log
+	// array en el que se almacenan los mensajes
 	static List<String> messageLogs = new ArrayList<>();
 
-	// list to store all users together with their connected rooms
+	// array en el que se almacenan los nombres de los usuarios junto con el chat
+	// room en el que están actualmente
 	static List<String> roomUsers = new ArrayList<>();
 
-	// list to store all active users name
+	// array en el que se almacenan los usuarios activos
 	private static List<String> activeUsers = new ArrayList<>();
 
-	// list to store all registered users and their passwords
+	// array en el que se almacenan todos los usuarios junto con sus contraseñas
 	private static List<String> registeredUsers = new ArrayList<>();
 
-	// list to store all available rooms, the default room is 'general'
+	// array en el que se almacenan los nombres de los chat room, estando por
+	// defecto el chat general
 	private static List<String> rooms = new ArrayList<String>() {
 		{
 			add("general");
 		}
 	};
 
+	// array en el que se almacenan todos los chat rooms privados junto con sus
+	// contraseñas
 	private static List<String> privateRooms = new ArrayList<String>();
 
-	// create an ORB object
+	// se crea el objeto ORB y se inicializa
 	private ORB orb;
 
-	// initialize the ORB object
 	public void setORB(ORB orb_val) {
 		orb = orb_val;
 	}
 
+	// primero comprueba registeredUsers en busca de (userName|password), y en caso
+	// de no encontrarlo devuelve "failure". Si lo encuentra, añade userName a
+	// activeUsers y crea un mensaje informativo en el chat general. Finalmente
+	// decuelve todos los mensajes de dicho chat
 	public String connection(String userName, String password) {
 
-		// create a 'StringBuilder sb' to store messages
 		StringBuilder sb = new StringBuilder();
 
-		// if names list already contains 'userName', return 'failure' message
-		// else
-		// add 'userName' to 'names' list
-		// append default room name to 'userName' and add it to 'roomUsers' list
-		// create a new message indicating a new user is connected and add it to
-		// 'messageLogs' list
-		// get all the previously sent messages to this group and append it to a string
-		// builder (sb) object
-		// return a string builder (sb) object containing all previous messages in this
-		// group separated by | symbol
 		if (!registeredUsers.contains(userName.toLowerCase() + "|" + password)) {
 			sb.append("failure");
 		} else {
@@ -79,7 +75,12 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 		return sb.toString();
 	}
 
-	//
+	// primero comprueba si el nombre de usuario y la contraseña contienen "|". Esta
+	// comprobación se hace porque dicho carácter está reservado para la separación
+	// entre usuario y contraseña. Si contienen el carácter, devuelve "invalid". En
+	// caso contrario, comprueba si el nombre de usuario ya está en uso, y si esto
+	// se cumple devuelve "failure". Finalmente, si pasa los filtros, añade el
+	// usuario y la contraseña a registeredUsers y devuelve success
 	public String signUp(String userName, String password) {
 
 		StringBuilder sb = new StringBuilder();
@@ -103,51 +104,44 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 		return sb.toString();
 	}
 
-	// add a new message to the 'messageLogs' list, the new message contains
-	// 'roomName' followed by the 'message'
+	// añade a messageLogs un nuevo mensaje
 	public void newMessages(String roomName, String message) {
 		messageLogs.add(roomName + " " + message);
 	}
 
-	// return the last message from 'roomName'
+	// devuelve el último mensaje que se haya introducido en messageLogs. Si este
+	// mensaje no corresponde con el chat room pasado por parámetro, devulve un
+	// string vacío
 	public String getMessages(String roomName) {
 		String valueToReturn = "";
-		// get the last message from 'messageLogs'
+
 		String message = messageLogs.get(messageLogs.size() - 1);
 
-		// if the last message returned is for 'roomName', append it to 'valueToReturn'
-		// otherwise, 'valueToReturn' will be null
 		if (message.startsWith(roomName)) {
 			valueToReturn = message.substring(message.indexOf(" ") + 1);
 		}
 
-		// return last message in 'roomName', or null if there is no new message for
-		// 'roomName'
 		return valueToReturn;
 	}
 
-	// return the list of all connected users
+	// devuelve todos los usuarios de activeUsers separados por un espacio
 	public String listUsers(String roomName) {
 
 		StringBuilder sb = new StringBuilder();
 
-		// loop through the names list and append all user names to a 'StringBuilder
-		// (sb)' object
 		for (String s : activeUsers) {
 			sb.append(s);
 			sb.append(" ");
 		}
 
-		// return all users
 		return sb.toString();
 	}
 
-	// return the list of all available rooms
+	// devuelve todos los chat rooms de rooms separados por un espacio. Además, si
+	// el chat room es privado añade "(privado)"
 	public String listRooms() {
 		StringBuilder sb = new StringBuilder();
 
-		// loop through the rooms list and append all available rooms to a
-		// 'StringBuilder (sb)' object
 		for (String s : rooms) {
 			sb.append(s);
 			for (int i = 0; i < privateRooms.size(); i++) {
@@ -158,16 +152,14 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 			sb.append(" ");
 		}
 
-		// return all room names
 		return sb.toString();
 	}
 
-	// create a new room 'roomName'
+	// añade un nuevo chat room a rooms, comprobando si dicho chat room no existe
+	// previamente
 	public String createNewRooms(String roomName) {
 		String response = "";
 
-		// if 'roomName' already exist, return a failure message 'exist'
-		// else, add 'roomName' to the rooms list and return a success message 'created'
 		if (roomName.contains("|")) {
 			response = "invalid";
 		} else if (rooms.contains(roomName)) {
@@ -177,16 +169,15 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 			response = "created";
 		}
 
-		// return either success or failure
 		return response;
 	}
 
-	// create a new room 'roomName'
+	// crea un nuevo chat room privado, comprobando antes si dicho chat room no
+	// existe previamente. Añade el nombre del chat room a rooms, y el nombre junto
+	// con la contrasela a privateRooms
 	public String createNewPrivateRooms(String roomName, String password) {
 		String response = "";
 
-		// if 'roomName' already exist, return a failure message 'exist'
-		// else, add 'roomName' to the rooms list and return a success message 'created'
 		if (roomName.contains("|") || password.contains("|")) {
 			response = "invalid";
 		} else if (rooms.contains(roomName)) {
@@ -197,17 +188,15 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 			response = "created";
 		}
 
-		// return either success or failure
 		return response;
 	}
 
-	// join an existing room
+	// permite al usuario unirse a un chat room. Si el chat room no existe devuelve
+	// "no-room", si existe pero es privado devuelve "is-private", y si pasa los
+	// filtros añade a roomUsers el chat room junto con el usuario y manda un
+	// mensaje informativo, además de devolver todos los mensajes de dicho chat
 	public String joinRoom(String roomToJoin, String name) {
 		StringBuilder response = new StringBuilder();
-
-		// if 'roomToJoin' does not exist, return 'no-room' failure message
-		// else, append 'roomToJoin' to 'name' and add it to the 'roomUsers' list,
-		// return success message 'joined'
 
 		Boolean is_private = false;
 		for (int i = 0; i < privateRooms.size(); i++) {
@@ -232,17 +221,16 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 			}
 		}
 
-		// return either success or failure message
 		return response.toString();
 	}
 
-	// join an existing private room
+	// permite al usuario unirse a un chat privado. Si la combinación de chat room y
+	// contraseña no existe, devuelve "no-rooms". En caso contrario, añade a
+	// roomUsers el chat room junto con el usuario y manda un
+	// mensaje informativo, además de devolver todos los mensajes de dicho chat
 	public String joinPrivateRoom(String roomToJoin, String password, String name) {
 		StringBuilder response = new StringBuilder();
 
-		// if 'roomToJoin' does not exist, return 'no-room' failure message
-		// else, append 'roomToJoin' to 'name' and add it to the 'roomUsers' list,
-		// return success message 'joined'
 		Boolean no_room = true;
 		for (int i = 0; i < privateRooms.size(); i++) {
 			if (privateRooms.get(i).contains(roomToJoin + "|" + password)) {
@@ -264,19 +252,16 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 			}
 		}
 
-		// return either success or failure message
 		return response.toString();
 	}
 
-	// leave connected room
+	// permite al usuario abandonar un chat room. Si el chat introducido no existe
+	// devuelve "no-room". Si el chat existe pero el usuario no está en dicho chat,
+	// devuelve "no-user". Si pasa los filtros, se elimina el chat room y el usuario
+	// de roomUsers, se manda un mensaje informativo y devuelve "leave-success"
 	public String leaveRoom(String roomToLeave, String name) {
 		String response = "";
 
-		// if 'rooms' does not contain 'roomToLeave' return 'no-room' failure
-		// else if 'roomUsers' does not contain 'name' return 'no-user' failure
-		// else remove 'name' from 'roomToLeave'
-		// send message to 'roomToLeave' users indicating the user has left
-		// return 'leave-success' success
 		if (!rooms.contains(roomToLeave)) {
 			response = "no-room";
 		} else if (!roomUsers.contains(roomToLeave + " " + name)) {
@@ -287,15 +272,16 @@ class ServerInterfaceImpl extends ServerInterfacePOA {
 			response = "leave-success";
 		}
 
-		// return either success or failure message
 		return response;
 	}
 
-	// disconnect from the chat application
+	// permite al usuario desconectarse de la aplicación. Se elimina de los usuarios
+	// activos pero se mantiene en registeredUsers por si quiere volver bajo el
+	// mismo nombre
 	public void disconnect(String userName, String roomName) {
-		// remove 'userName' from 'names' list
+
 		activeUsers.remove(userName);
-		// send message to 'roomName' users indicating the user has left
+
 		messageLogs.add(roomName + " " + userName + " has disconnected");
 	}
 
@@ -306,35 +292,28 @@ public class CORBAServer {
 	public static void main(String args[]) {
 
 		try {
-			// create and initialize the ORB
+			// setup del servidor
 			ORB orb = ORB.init(args, null);
 
-			// get reference to rootpoa & activate the POAManager
 			POA rootpoa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
 			rootpoa.the_POAManager().activate();
 
-			// create servant and register it with the ORB
 			ServerInterfaceImpl serverInterfaceImpl = new ServerInterfaceImpl();
 			serverInterfaceImpl.setORB(orb);
 
-			// get object reference from the servant
 			org.omg.CORBA.Object ref = rootpoa.servant_to_reference(serverInterfaceImpl);
 			ServerInterface href = ServerInterfaceHelper.narrow(ref);
 
-			// get the root naming context
 			org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
-			// Use NamingContextExt which is part of the Interoperable Naming Service (INS)
-			// specification.
+
 			NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
 
-			// bind the Object Reference in Naming
 			String name = "ServerInterface";
 			NameComponent path[] = ncRef.to_name(name);
 			ncRef.rebind(path, href);
 
 			System.out.println("Server running, accepting client connection...");
 
-			// wait for invocations from clients
 			orb.run();
 		}
 

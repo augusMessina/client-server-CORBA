@@ -20,27 +20,28 @@ public class CORBAClient {
     public static void main(String args[]) {
 
         try {
-            // create and initialize the ORB
+            // crea e inicializa un objeto ORB, que se conectará con el servidor
             ORB orb = ORB.init(args, null);
 
-            // get the root naming context
-            org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+            // se extrae la raiz del ORB y se guarda en una referencia mediante
+            // NamingContext
 
-            // Use NamingContextExt instead of NamingContext. This is part of the
-            // Interoperable naming Service.
+            org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
             NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
 
-            // resolve the Object Reference in Naming
+            // se extrae la implementación del ORB usando el mismo nombre
+            // que aquel con el que se guardó en el servidor ("Hello")
             String name = "ServerInterface";
             serverInterfaceImpl = ServerInterfaceHelper.narrow(ncRef.resolve_str(name));
 
-            // print a message to the terminal
+            // muestra el objeto recibido por terminal
             System.out.println("Obtained a handle on server object: " + serverInterfaceImpl);
 
-            // create BufferedReader 'br' to store input stream
+            // se crea un BufferedReader en el que se irá guardando lo que el usuario
+            // escriba por consola
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
-            // print to the terminal
+            // pide al usuario que introduzca "login" o "signup".
             System.out.println("");
             System.out.print("Enter 'login' for logging in or 'signup' for signing up: ");
             String optInput = br.readLine();
@@ -48,6 +49,10 @@ public class CORBAClient {
             String nameInput = "";
             String passwordInput = "";
 
+            // --------------------------------------------------
+            // Si introduce login, pide al usuario un nombre y una contraseña, para
+            // posteriormente llamar al método connection()
+            // --------------------------------------------------
             if (optInput.equals("login")) {
                 System.out.print("Enter your name : ");
                 nameInput = br.readLine();
@@ -55,6 +60,10 @@ public class CORBAClient {
                 passwordInput = br.readLine();
                 System.out.println("");
 
+                // --------------------------------------------------
+                // Si introduce login, pide al usuario un nombre y una contraseña, para
+                // posteriormente llamar al método signUp() y seguidamente a connection()
+                // --------------------------------------------------
             } else if (optInput.equals("signup")) {
                 System.out.print("Enter a name : ");
                 nameInput = br.readLine();
@@ -76,12 +85,8 @@ public class CORBAClient {
                 System.exit(0);
             }
 
-            // get the response from the web server
-            // if the response is 'failure'
-            // print a message saying the user needs to choose a different name
-            // else, set the 'connectedRoom' to the default 'general'
-            // set the 'userName' to 'nameInput'
-            // print the 'connectedTime' to the terminal
+            // se gestionan todas las posibles respuestas del serivdor ("failure",
+            // "invalid",...)
             String connectionResponse = serverInterfaceImpl.connection(nameInput, passwordInput);
             if (connectionResponse.equals("failure")) {
                 System.out.println("Incorrect user name or password\n");
@@ -96,16 +101,18 @@ public class CORBAClient {
                 System.out.println(connectedTime);
                 System.out.println("");
 
-                // get all the previously sent messages to this room and print it to the
-                // terminal
+                // si el login es exitoso, muestra todos los mensajes enviados en el chat
+                // general
                 String[] strResponseParts = strResponse.split(Pattern.quote("|"));
                 for (int i = 1; i < strResponseParts.length - 1; i++) {
                     String[] strArr = strResponseParts[i].split(" ", 2);
                     System.out.println(strArr[1] + "\n");
                 }
 
-                // create a thread that will keep asking the server if there is a new message
-                // ment for the connected room every 500 miliseconds
+                // thread para recibir el último mensaje enviado, se ejecuta cada 500ms y solo
+                // se muestra y se guarda el mensaje recibido solo si el mensaje no es el mismo
+                // que el último recibido y si el mensaje no ha sido enviado por el propio
+                // usuario
                 Thread receivingMessages = new Thread(new Runnable() {
                     public void run() {
                         while (true) {
@@ -125,31 +132,24 @@ public class CORBAClient {
                     }
                 });
 
-                // start the receiving messages thread
                 receivingMessages.start();
 
+                // aqui comienza un while(true) en el que el cliente ejecuta distintos métodos
+                // en función de lo que el usuario introduzca por consola
                 while (true) {
 
                     String input = br.readLine();
                     System.out.println("");
 
-                    // if the 'input' starts with 'exit', disconnect the client by calling the
-                    // remote method 'disconnect'
+                    // si el usuario introdue "/exit", llama al método disconnect() y finaliza la
+                    // ejecución del código
                     if (input.equals("/exit")) {
                         serverInterfaceImpl.disconnect(userName, connectedRoom);
                         System.exit(0);
 
-                        // if 'input' starts with the keyword '/join'
-                        // get the room name to join
-                        // if the user is already connected to that room, display a message indicating
-                        // this
-                        // else, call the remote method 'joinRoom' and pass the room name to join and
-                        // the 'userName'
-                        // get the respose from the remote method
-                        // if the response is 'joined', leave the previously connected method
-                        // display all the previous messages sent to the new connected room
-                        // else if the response is 'no-room', display room not found error
-                        // else, display invalid command error
+                        // si el usuario introduce "/join {roomName}" separa la línea en un array
+                        // ["/join", "roomName"] y llama al método joinRoom(), pasando por parámetro el
+                        // nombre del chat room introducido y el nombre del usuario.
 
                     } else if (input.startsWith("/join")) {
 
@@ -163,6 +163,11 @@ public class CORBAClient {
                                 String response = serverInterfaceImpl.joinRoom(inputParts[1], userName);
                                 String[] responseParts = response.split(Pattern.quote("|"));
 
+                                // --------------------------------------------------
+                                // Si la respuesta es "joined", muestra todos los mensajes que se han enviado en
+                                // el nuevo chat room y se actualiza el valor de connectedRoom
+                                // --------------------------------------------------
+
                                 if (response.startsWith("joined")) {
 
                                     String leave = serverInterfaceImpl.leaveRoom(connectedRoom, userName);
@@ -175,8 +180,17 @@ public class CORBAClient {
                                         System.out.println(arr[1] + "\n");
                                     }
 
+                                    // --------------------------------------------------
+                                    // Si la respuesta es "no-room", muestra un mensaje de error
+                                    // --------------------------------------------------
+
                                 } else if (response.equals("no-room")) {
                                     System.out.println(inputParts[1] + " room not found\n");
+
+                                    // --------------------------------------------------
+                                    // Si la respuesta es "is-private", pide una contraseña y llama a
+                                    // joinPrivateRoom()
+                                    // --------------------------------------------------
 
                                 } else if (response.equals("is-private")) {
                                     System.out.println("This room is private, enter the password to join : ");
@@ -209,11 +223,9 @@ public class CORBAClient {
 
                         }
 
-                        // else if the 'input' starts with the keyword '/leave'
-                        // first check the room to leave
-                        // if it's general then display an error message
-                        // else check to make sure the room exist and the user is connected to the room
-                        // display the appropriate message (either success or failure)
+                        // si el usuario introduce "/leave {roomName}" separa la línea en un array
+                        // ["/join", "roomName"] y llama al método leaveRoom(), pasando por parámetro el
+                        // nombre del chat room introducido y el nombre del usuario.
 
                     } else if (input.startsWith("/leave")) {
                         String[] inputParts = input.split(Pattern.quote(" "));
@@ -238,10 +250,8 @@ public class CORBAClient {
 
                         }
 
-                        // else if the 'input' starts with the keyword '/users' get the list of all
-                        // users by calling
-                        // the remote method 'listUsers' method and display the returned
-                        // 'returnValueParts'
+                        // si el usuario introduce "/users" llama al método listUsers() y muestra la
+                        // respuesta
 
                     } else if (input.startsWith("/users")) {
                         String returnValue = serverInterfaceImpl.listUsers(connectedRoom);
@@ -253,10 +263,8 @@ public class CORBAClient {
                         }
                         System.out.println("*******************\n");
 
-                        // else if the 'input' starts with the keyword '/rooms' get the list of all
-                        // rooms by calling
-                        // the the remote method 'listRooms' method and display the returned
-                        // 'returnValueParts'
+                        // si el usuario introduce "/rooms" llama al método listRooms() y muestra la
+                        // respuesta
 
                     } else if (input.startsWith("/rooms")) {
                         String returnValue = serverInterfaceImpl.listRooms();
@@ -268,8 +276,14 @@ public class CORBAClient {
                         }
                         System.out.println("*******************\n");
 
+                        // si el usuario introduce "/currentRoom" muestra por pantalla el contenido de
+                        // connectedRoom
+
                     } else if (input.equals("/currentRoom")) {
                         System.out.println("You are currently in " + connectedRoom + "\n");
+
+                        // si el usuario introduce "/help" muestra por pantalla una lista con todos los
+                        // posibles comandos funcionales
 
                     } else if (input.startsWith("/help")) {
                         System.out.println("* This is a list of the commands you can use:");
@@ -288,9 +302,9 @@ public class CORBAClient {
                         System.out.println(
                                 "*    /exit --------------------------------------- disconnect from the chat (log out)              *\n");
 
-                        // else if the 'input' starts with the keyword '/createPrivate'
-                        // create a new private room by calling
-                        // the remote method 'createNewPrivateRooms' if it does not already exist
+                        // si el usuario introduce "/createPrivate {roomName} {roomPassword}" llama al
+                        // método createPrivateRoom() y pasa como parámetros el nombre del chat y la
+                        // contraseña introducidos.
 
                     } else if (input.startsWith("/createPrivate")) {
                         String[] inputParts = input.split(Pattern.quote(" "));
@@ -308,9 +322,8 @@ public class CORBAClient {
                             }
                         }
 
-                        // else if the 'input' starts with the keyword '/create' create a new room by
-                        // calling
-                        // the remote method 'createNewRooms' if it does not already exist
+                        // si el usuario introduce "/createPrivate {roomName}" llama al
+                        // método createRoom() y pasa como parámetro el nombre del chat
 
                     } else if (input.startsWith("/create")) {
                         String[] inputParts = input.split(Pattern.quote(" "));
@@ -327,13 +340,15 @@ public class CORBAClient {
                             }
                         }
 
+                        // si el usuario introduce "/" y el comando no corresponde con ninguno de los
+                        // mencionados hasta ahora, muestra un mensaje de ayuda
+
                     } else if (input.startsWith("/")) {
                         System.out.println("Command does not exist. You can see the list of commands with /help\n");
 
-                        // else send the message to all connected users by calling the remote method
-                        // 'newMessages'
-                        // the message contain the room to send 'connectedRoom', the 'userName' and the
-                        // message 'input'
+                        // para cualquier otro input, el cliente considerará que es un mensaje a enviar
+                        // y llamará al método newMessages(), pasándo como parámetros connectedRoom y el
+                        // input introducido junto con el nombre del usuario guardado
 
                     } else {
                         serverInterfaceImpl.newMessages(connectedRoom, "@" + userName + ":" + input);
@@ -341,12 +356,17 @@ public class CORBAClient {
                     }
                 }
             }
+
+            // si ocurre algún error, el cliente se desconecta y se finaliza la ejecución
+            // del código
+
         } catch (
 
         Exception e) {
             System.out.println("ERROR : " + e);
             e.printStackTrace(System.out);
             serverInterfaceImpl.disconnect(userName, connectedRoom);
+            System.exit(0);
         }
     }
 }
