@@ -45,7 +45,7 @@ The following operations have been added to the client:
 
 Adittionally, the client's errors managing has been improved, making it less possible get an Exception.
 
-### **************************************\***************************************
+---
 
 ## Introducción
 
